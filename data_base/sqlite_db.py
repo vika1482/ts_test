@@ -10,11 +10,17 @@ def sql_start():#создание, подключение
     if base:
         print('Data base connected OK!')
     base.execute('CREATE TABLE IF NOT EXISTS staff(name TEXT, lastname TEXT PRIMARY KEY)')#IF NOT EXISTS-если такой не сущ-ет
+    base.execute('CREATE TABLE IF NOT EXISTS note(id INTEGER PRIMARY KEY AUTOINCREMENT, lastname TEXT, note TEXT, id_user TEXT)')
     base.commit()#записать
 
 async def sql_add_command(state):#функция изменения бд
     async with state.proxy() as data:#открываем словарь
         cur.execute('INSERT INTO staff VALUES (?, ?)', tuple(data.values()))#?-шифруем значения
+        base.commit()
+
+async def sql_add_note_command(state):#функция изменения бд
+    async with state.proxy() as data:#открываем словарь
+        cur.execute('INSERT INTO note(lastname, note, id_user) VALUES (?, ?, ?)', tuple(data.values()))#?-шифруем значения
         base.commit()
 
 async def sql_read(message:types.Message):#получаем событие смс, когда нажимают на кнопку "Меню"
@@ -29,6 +35,10 @@ async def sql_read(message:types.Message):#получаем событие см�
 async def sql_read2():
     return cur.execute('SELECT * FROM staff').fetchall()#прочитать выборку из таблицы и возвращаем в admin.py delete_item
 
+async def sql_read_department():
+    return cur.execute('SELECT * FROM department').fetchall()    
+
 async def sql_delete_command(data):#по названию
     cur.execute('DELETE FROM staff WHERE lastname == ?', (data,))
     base.commit()
+

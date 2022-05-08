@@ -51,7 +51,7 @@ async def cancel_handler(message: types.Message, state:FSMContext):
 
 #Ловим первый ответ и пишем в словарь
 # @dp.message_handler(content_types=['photo'], state=FSMAdmin.photo) #state=FSMAdmin.photo-бот понимает, что сюда попадет 1st ответ от user
-async def load_photo(message: types.Message, state: FSMContext):
+async def load_name(message: types.Message, state: FSMContext):
     if message.from_user.id == ID:
         async with state.proxy() as data: #открываем словарь
             data['name'] = message.text #записываем значение, получаем id фото
@@ -78,7 +78,7 @@ async def load_photo(message: types.Message, state: FSMContext):
 
 #Ловим последний ответ
 # @dp.message_handler(state=FSMAdmin.price) 
-async def load_price(message: types.Message, state: FSMContext):
+async def load_lastname(message: types.Message, state: FSMContext):
     if message.from_user.id == ID:
         async with state.proxy() as data: #открываем словарь
             data['lastname'] = message.text #записываем значение
@@ -108,10 +108,10 @@ def register_handlers_admin(dp : Dispatcher):
     dp.register_message_handler(cm_start, commands=['Загрузить'], state=None)
     dp.register_message_handler(cancel_handler, state="*", commands='Отмена')
     dp.register_message_handler(cancel_handler, Text(equals='Отмена',ignore_case=True), state="*") 
-    dp.register_message_handler(load_photo, state=FSMAdmin.name)
+    dp.register_message_handler(load_name, state=FSMAdmin.name)
     # dp.register_message_handler(load_name, state=FSMAdmin.name)
     # dp.register_message_handler(load_description, state=FSMAdmin.description)
-    dp.register_message_handler(load_price, state=FSMAdmin.lastname)   
+    dp.register_message_handler(load_lastname, state=FSMAdmin.lastname)   
     dp.register_message_handler(make_change_command, commands=['moderator'], is_chat_admin=True )
     # dp.register_message_handler(del_callback_run, lambda x: x.data and x.data.startwith('del ')) 
     # dp.register_message_handler(delete_item, commands=['Удалить'])  
