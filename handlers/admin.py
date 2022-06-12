@@ -13,8 +13,6 @@ ID = None #изначально значение 0
 class FSMAdmin(StatesGroup):
     name = State() #State - обозначаем, что это состояние бота
     lastname = State()
-    # description = State()
-    # price = State()
 
 
 #Получаем ID текущего модератора
@@ -26,14 +24,7 @@ async def make_change_command(message: types.Message):
                                                 'Выбери необходимое действие.', reply_markup=admin_kb.button_case_admin)
     await message.delete()
 
-#Начало диалога загрузки нового пункта меню
-# @dp.message_handler(commands='Загрузить', state=None)#сначала бот не в режиме машиносостояний
-# async def cm_start(message : types.Message):
-#     if message.from_user.id == ID:
-#         await FSMAdmin.photo.set() #переходит в режим машиносостояний, состояние ожидания на вопрос
-#         await message.reply('Загрузи фото')
-
-async def cm_start(message: types.Message):
+async def cm_start(message: types.Message, state=None):
     if message.from_user.id == ID:
         await FSMAdmin.name.set()#переводим бота в ожидание next state
         await message.reply('Введи имя:')   
@@ -82,30 +73,30 @@ async def load_lastname(message: types.Message, state: FSMContext):
     if message.from_user.id == ID:
         async with state.proxy() as data: #открываем словарь
             data['lastname'] = message.text #записываем значение
-        await sqlite_db.sql_add_command(state)
+        await sqlite_db.sql_add_users_command(state, message)
         await state.finish()#бот выходит из машиносостояний и очищает словарь
 
 #q хендлер для ответа
 @dp.callback_query_handler(lambda x: x.data and x.data.startswith('del '))#если событие начинается на 'del '
 async def del_callback_run(callback_query: types.CallbackQuery):#callback_query-название параметра
-        await sqlite_db.sql_delete_command(callback_query.data.replace("del ", ""))#команда удаления
+        await sqlite_db.sql_delete_TS_command(callback_query.data.replace("del ", ""))#команда удаления
         await callback_query.answer(text=f'Сотрудник {callback_query.data.replace("del ", "")} удален.', show_alert=True)#отправляем, что запрос выполнен
 
-@dp.message_handler(commands='Удалить')
+@dp.message_handler(commands='Удалить_сотрудника')
 async def delete_item(message:types.Message):
-    read = await sqlite_db.sql_read2()#читаем данные (sqlite_db)
+    read = await sqlite_db.sql_read_users_ts_command()#читаем данные (sqlite_db)
     keyboard = types.InlineKeyboardMarkup()
     if message.from_user.id == ID:
         for ret in read:#по получившемуся списку проходим
             # await bot.send_message(message.from_user.id, f'{ret[0]}\nИмя: {ret[1]}\nОписание: {ret[2]}\nЦена {ret[-1]}')
-            keyboard.add(types.InlineKeyboardButton( f'{ret[0]} {ret[-1]}', callback_data=f'del {ret[1]}'))
+            keyboard.add(types.InlineKeyboardButton( f'{ret[1]} {ret[2]}', callback_data=f'del {ret[2]}'))
         await bot.send_message(message.from_user.id, text='Выберите сотрудника для удаления:', reply_markup=keyboard)
                 # add(InlineKeyboardButton(f'Удалить {ret[1]}', callback_data=f'del {ret[1]}')))#по названию через callback_data отправляем в бд запрос на удаление
 
 
 #Регистрируем хендлеры
 def register_handlers_admin(dp : Dispatcher):
-    dp.register_message_handler(cm_start, commands=['Загрузить'], state=None)
+    dp.register_message_handler(cm_start, commands=['Добавить_сотрудника'], state=None)
     dp.register_message_handler(cancel_handler, state="*", commands='Отмена')
     dp.register_message_handler(cancel_handler, Text(equals='Отмена',ignore_case=True), state="*") 
     dp.register_message_handler(load_name, state=FSMAdmin.name)
