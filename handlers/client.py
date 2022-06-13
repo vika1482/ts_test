@@ -1,5 +1,7 @@
 from email.mime import message
+from glob import glob
 from aiogram import Dispatcher, types
+from pytz import common_timezones
 from create_bot import dp, bot
 from keyboards import kb_client
 from aiogram.types import ReplyKeyboardRemove
@@ -12,15 +14,15 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 global people_dict
 people_dict = {}
 
-class FSMAdmin(StatesGroup):
-    name = State() #State - обозначаем, что это состояние бота
-    lastname = State()
+class FSMcomment(StatesGroup):
+    comment = State() #State - обозначаем, что это состояние бота
     # id_user = State()
 
 class FSMclient(StatesGroup):
     write = State() #State - обозначаем, что это состояние бота
     name = State()
     lastname = State()
+    comment = State()
 
 
 #главная команда
@@ -60,7 +62,7 @@ async def set_staff(callback_query: types.CallbackQuery):
 
 #выставляем оценку сотруднику
 @dp.callback_query_handler(lambda x: x.data and x.data.startswith('set_note '))#если событие начинается на 'set_note '
-async def set_note(callback_query: types.CallbackQuery, state: FSMContext):#callback_query-название параметра
+async def set_note(callback_query: types.CallbackQuery, state: FSMcomment):#callback_query-название параметра
     #await bot.send_message(callback_query.from_user.id, text="Я работаю")
     note_result = re.search(r'\d', callback_query.data)
     note = note_result.group(0)
@@ -70,18 +72,22 @@ async def set_note(callback_query: types.CallbackQuery, state: FSMContext):#call
     async with state.proxy() as data:
         data['note'] = note
         data['id_note'] = await sqlite_db.sql_add_note_command(note)
-        data['id_recipient'] = await sqlite_db.sql_get_id_by_lastname(last_name)
+        data['id_recipient'] = await sqlite_db.sql_get_id_by_lastname(last_name)#присваеваем переменной id пользователя получателя
         await sqlite_db.sql_add_note_recipient_command(data)
-    if int(note) < 5:
-        # ввод комментария, запись коммента, потом вызов записи ифномрации о клиенте
-        
-        pass
-    else:
+        # await bot.send_message(callback_query.from_user.id, text = 'Опишите небольшой комментарий по причине не удовлетворенности:') # вызов записи инфы о клиенте
+        # await FSMcomment.comment.set()
+
         await bot.send_message(callback_query.from_user.id, text = 'Спасибо за обратную связь!\nОставьте, пожалуйста, немного информации о себе:') # вызов записи инфы о клиенте
         #await state.finish()
         await select_department(callback_query)
   
-
+@dp.message_handler(state=FSMclient.comment)
+async def set_comment(message: types.Message, state: FSMclient):
+    comment = message.text
+    async with state.proxy() as data:
+        await sqlite_db.sql_add_comment_note_command(comment, data['id_note'])
+    await message.answer(text = f'Записано: {comment}')
+    await state.finish()
   
 
 #выбор отдела сотрудником
@@ -115,8 +121,13 @@ async def set_name(message: types.Message, state: FSMclient):
 async def set_lastname(message: types.Message, state: FSMclient):
     global lastname, id_department, name
     lastname = message.text
-    await state.finish()
     await message.answer(text = f'Записано: {id_department, name, lastname}')
+    async with state.proxy() as data:
+        if int(data['note']) < 5:
+            await message.answer(text="Почему не 5?")
+            await FSMclient.comment.set()
+        else:
+            await state.finish()
 
 
 

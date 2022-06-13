@@ -39,9 +39,22 @@ async def sql_delete_TS_command(data):#по названию
 # ------------------------------------------------------------------------------------------
 # ДОБАВЛЕНИЕ ОЦЕНКИ в Note
 async def sql_add_note_command(note):#функция изменения бд
-    note = cur.execute(f'INSERT INTO Note(note) VALUES ({note})')
+    note = cur.execute(f"INSERT INTO Note('note') VALUES ({note})")
     base.commit()
     return note.lastrowid
+        # cur.execute(f'SELECT FROM Users u \
+        #                     JOIN UsersDepartment ud ON u.id_users = ud.id_users\
+        #                     WHERE lastname = "{data["lastname"]}" AND id_department = 10').lastrowid
+        # cur.execute(f'INSERT INTO NoteUsersRecipient(id_note, id_users) VALUES ({cur.lastrowid}, 2)')
+        # base.commit()
+
+# ------------------------------------------------------------------------------------------
+# ДОБАВЛЕНИЕ комментария в Note
+async def sql_add_comment_note_command(comment_str: str, id_note: str):#функция изменения бд
+    id_note = int(id_note)
+    cur.execute("UPDATE Note SET comment = ? WHERE id_note = ?", (comment_str, id_note))
+    base.commit()
+    # return note.lastrowid
         # cur.execute(f'SELECT FROM Users u \
         #                     JOIN UsersDepartment ud ON u.id_users = ud.id_users\
         #                     WHERE lastname = "{data["lastname"]}" AND id_department = 10').lastrowid
@@ -62,17 +75,18 @@ async def sql_add_all_users_command(state, message:types.Message):
             base.commit()
 
 # ------------------------------------------------------------------------------------------
-# ДОБАВЛЕНИЕ ОЦЕНКИ и User в NoteUsersRecipient 
-async def sql_add_note_recipient_command(data):
-    cur.execute(f'INSERT INTO NoteUsersRecipient(id_note, id_users ) VALUES ({data["id_note"]}, {data["id_recipient"]})')#?-шифруем значения
-    base.commit()
-
-# ------------------------------------------------------------------------------------------
 # ПОЛУЧЕНИЕ id_users выбранного сотрудника по фамилиии
 async def sql_get_id_by_lastname(lastname):#функция изменения бд
     answer = cur.execute(f'SELECT id_users FROM Users WHERE lastname = "{lastname}"')
     return answer.fetchone()[0]
+
 # ------------------------------------------------------------------------------------------
+# ДОБАВЛЕНИЕ ОЦЕНКИ и User в NoteUsersRecipient 
+async def sql_add_note_recipient_command(data):
+    cur.execute(f'INSERT INTO NoteUsersRecipient(id_note, id_users ) VALUES ({data["id_note"]}, {data["id_recipient"]})')#?-шифруем значения
+    base.commit()
+# ------------------------------------------------------------------------------------------
+
 # мб понадобиться хз что это
 async def sql_read(message:types.Message):#получаем событие смс, когда нажимают на кнопку "Меню"
     for ret in cur.execute('SELECT * FROM Users\
