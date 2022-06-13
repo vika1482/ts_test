@@ -14,9 +14,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 global people_dict
 people_dict = {}
 
-class FSMcomment(StatesGroup):
-    comment = State() #State - обозначаем, что это состояние бота
-    # id_user = State()
+
 
 class FSMclient(StatesGroup):
     write = State() #State - обозначаем, что это состояние бота
@@ -44,6 +42,7 @@ async def checkstaff(message: types.Message):
     keyboard = types.InlineKeyboardMarkup()
     for ret in read:
         keyboard.add(types.InlineKeyboardButton( f'{ret[1]} {ret[2]}', callback_data = f'set_staff {ret[2]}'))
+    # await message.date
     await bot.send_message(message.from_user.id,text='Пожалуйста, выберите сотрудника:', reply_markup=keyboard)  
 
 
@@ -62,7 +61,7 @@ async def set_staff(callback_query: types.CallbackQuery):
 
 #выставляем оценку сотруднику
 @dp.callback_query_handler(lambda x: x.data and x.data.startswith('set_note '))#если событие начинается на 'set_note '
-async def set_note(callback_query: types.CallbackQuery, state: FSMcomment):#callback_query-название параметра
+async def set_note(callback_query: types.CallbackQuery, state: FSMclient):#callback_query-название параметра
     #await bot.send_message(callback_query.from_user.id, text="Я работаю")
     note_result = re.search(r'\d', callback_query.data)
     note = note_result.group(0)
@@ -119,9 +118,16 @@ async def set_name(message: types.Message, state: FSMclient):
 
 @dp.message_handler(state=FSMclient.lastname)
 async def set_lastname(message: types.Message, state: FSMclient):
-    global lastname, id_department, name
+    global lastname, id_department, name, id_author
     lastname = message.text
-    await message.answer(text = f'Записано: {id_department, name, lastname}')
+    # await message.answer(text = f'Записано: {id_department, name, lastname}')
+    await sqlite_db.sql_add_all_users_command(name, lastname, id_department, message)
+    id_author = await sqlite_db.sql_get_id_by_lastname(lastname)
+    
+    async with state.proxy() as data:
+        data['id_author'] = await sqlite_db.sql_get_id_by_lastname(lastname)
+        await sqlite_db.sql_add_note_author_command(data)
+
     async with state.proxy() as data:
         if int(data['note']) < 5:
             await message.answer(text="Почему не 5?")

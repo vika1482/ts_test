@@ -15,7 +15,7 @@ def sql_start():#создание, подключение
     # base.execute('CREATE TABLE IF NOT EXISTS Note(id_note id_users PRIMARY KEY AUTOINCREMENT, note TEXT, comment TEXT)')
     base.commit()#записать
 # ------------------------------------------------------------------------------------------
-# ДОБАВЛЕНИЕ СОТРУДНИКА Users и UsersDepartment
+# ДОБАВЛЕНИЕ СОТРУДНИКА TS Users и UsersDepartment +++++++++++++++++++++
 async def sql_add_users_command(state, message:types.Message):
     async with state.proxy() as data:#открываем словарь
         answer = cur.execute(f'SELECT COUNT(*) FROM Users u \
@@ -29,61 +29,55 @@ async def sql_add_users_command(state, message:types.Message):
             await bot.send_message(message.from_user.id, 'Сотрудник успешно добавлен')
         else:
             await bot.send_message(message.from_user.id, 'Такой сотрудник уже существует')
-        # cur.execute('INSERT INTO Users(name, lastname) VALUES (?, ?) ', tuple(data.values()))#?-шифруем значения 
-        # #WHERE NOT EXISTS (SELECT lastname FROM Users WHERE lastname=value)
 # ------------------------------------------------------------------------------------------
-# УДАЛЕНИЕ Users TS
+# УДАЛЕНИЕ Users TS ++++++++++++++++
 async def sql_delete_TS_command(data):#по названию
     cur.execute('UPDATE Users SET deleted = 1 WHERE lastname == ?', (data,))
     base.commit()
 # ------------------------------------------------------------------------------------------
-# ДОБАВЛЕНИЕ ОЦЕНКИ в Note
+# ДОБАВЛЕНИЕ ОЦЕНКИ в Note +++++++++++++++++++++++
 async def sql_add_note_command(note):#функция изменения бд
     note = cur.execute(f"INSERT INTO Note('note') VALUES ({note})")
     base.commit()
     return note.lastrowid
-        # cur.execute(f'SELECT FROM Users u \
-        #                     JOIN UsersDepartment ud ON u.id_users = ud.id_users\
-        #                     WHERE lastname = "{data["lastname"]}" AND id_department = 10').lastrowid
-        # cur.execute(f'INSERT INTO NoteUsersRecipient(id_note, id_users) VALUES ({cur.lastrowid}, 2)')
-        # base.commit()
 
 # ------------------------------------------------------------------------------------------
-# ДОБАВЛЕНИЕ комментария в Note
+# ДОБАВЛЕНИЕ комментария в Note ++++++++++++
 async def sql_add_comment_note_command(comment_str: str, id_note: str):#функция изменения бд
     id_note = int(id_note)
     cur.execute("UPDATE Note SET comment = ? WHERE id_note = ?", (comment_str, id_note))
     base.commit()
-    # return note.lastrowid
-        # cur.execute(f'SELECT FROM Users u \
-        #                     JOIN UsersDepartment ud ON u.id_users = ud.id_users\
-        #                     WHERE lastname = "{data["lastname"]}" AND id_department = 10').lastrowid
-        # cur.execute(f'INSERT INTO NoteUsersRecipient(id_note, id_users) VALUES ({cur.lastrowid}, 2)')
-        # base.commit()
-
 # ------------------------------------------------------------------------------------------
-# ДОБАВЛЕНИЕ автора в Users
-async def sql_add_all_users_command(state, message:types.Message):
-    async with state.proxy() as data:#открываем словарь
-        answer = cur.execute(f'SELECT COUNT(*) FROM Users u \
-                            JOIN UsersDepartment ud ON u.id_users = ud.id_users\
-                            WHERE lastname = "{data["lastname_author"]}" AND name = "{data["name"]}"')
-        count = answer.fetchone()[0]
-        if not count:
-            cur.execute('INSERT INTO Users(name, lastname) VALUES (?, ?) ', tuple(data.values()))
-            cur.execute(f'INSERT INTO UsersDepartment(id_users, id_department) VALUES ({cur.lastrowid}, id_department)')
-            base.commit()
-
+# ДОБАВЛЕНИЕ автора в Users ++++++++++++++++++++
+async def sql_add_all_users_command(name, lastname, id_department, message:types.Message):
+    # async with state.proxy() as data:#открываем словарь
+    answer = cur.execute(f'SELECT COUNT(*) FROM Users u \
+                        JOIN UsersDepartment ud ON u.id_users = ud.id_users\
+                        WHERE lastname = ? AND name = ?', (name, lastname))
+    count = answer.fetchone()[0]
+    if not count:
+        cur.execute('INSERT INTO Users(name, lastname) VALUES (?, ?) ', (name, lastname))
+        cur.execute(f'INSERT INTO UsersDepartment(id_users, id_department) VALUES ({cur.lastrowid}, {id_department})')
+        base.commit()
+        await bot.send_message(message.from_user.id, 'записан в бд')
+    else:
+        await bot.send_message(message.from_user.id, 'дубль')
 # ------------------------------------------------------------------------------------------
-# ПОЛУЧЕНИЕ id_users выбранного сотрудника по фамилиии
+# ПОЛУЧЕНИЕ id_users выбранного сотрудника по фамилиии +++++++++++++++++
 async def sql_get_id_by_lastname(lastname):#функция изменения бд
     answer = cur.execute(f'SELECT id_users FROM Users WHERE lastname = "{lastname}"')
     return answer.fetchone()[0]
 
 # ------------------------------------------------------------------------------------------
-# ДОБАВЛЕНИЕ ОЦЕНКИ и User в NoteUsersRecipient 
+# ДОБАВЛЕНИЕ ОЦЕНКИ и User в NoteUsersRecipient ++++++++++++++++++++++
 async def sql_add_note_recipient_command(data):
     cur.execute(f'INSERT INTO NoteUsersRecipient(id_note, id_users ) VALUES ({data["id_note"]}, {data["id_recipient"]})')#?-шифруем значения
+    base.commit()
+
+# ------------------------------------------------------------------------------------------
+# ДОБАВЛЕНИЕ ОЦЕНКИ и АВТОРА в NoteUsersAuthor ++++++++++++++++++
+async def sql_add_note_author_command(data):
+    cur.execute(f'INSERT INTO NoteUsersAuthor(id_note, id_users) VALUES ({data["id_note"]}, {data["id_author"]})')#?-шифруем значения
     base.commit()
 # ------------------------------------------------------------------------------------------
 
@@ -99,14 +93,14 @@ async def sql_read(message:types.Message):#получаем событие см�
         # # await bot.send_message(message.from_user.id,"Пожалуйста, выберите сотрудника",reply_markup=markup)
         await bot.send_message(message.from_user.id, f'{ret[0]} {ret[-1]}')#0-фото, 1-название и тд
 # ------------------------------------------------------------------------------------------
-# ЧТЕНИЕ Users ГДЕ id_department = TS
+# ЧТЕНИЕ Users ГДЕ id_department = TS ++++++++++++++++++++++++
 async def sql_read_users_ts_command():
     return cur.execute('SELECT * FROM Users u\
                             JOIN UsersDepartment ud ON u.id_users = ud.id_users\
                             WHERE id_department = 10 AND deleted = 0').fetchall()#прочитать выборку из таблицы и возвращаем в admin.py delete_item
 # ------------------------------------------------------------------------------------------
 
-#  ЧТЕНИЕ Department
+#  ЧТЕНИЕ Department +++++++++++++++++++++++++
 async def sql_read_department():
     return cur.execute('SELECT * FROM Department').fetchall()    
 
