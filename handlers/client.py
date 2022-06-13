@@ -123,7 +123,7 @@ async def set_lastname(message: types.Message, state: FSMclient):
     # await message.answer(text = f'Записано: {id_department, name, lastname}')
     await sqlite_db.sql_add_all_users_command(name, lastname, id_department, message)
     id_author = await sqlite_db.sql_get_id_by_lastname(lastname)
-    
+
     async with state.proxy() as data:
         data['id_author'] = await sqlite_db.sql_get_id_by_lastname(lastname)
         await sqlite_db.sql_add_note_author_command(data)

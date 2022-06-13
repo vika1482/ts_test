@@ -1,3 +1,4 @@
+from datetime import datetime
 import sqlite3 as sq#встроенная бд, использует 1 файл
 from create_bot import dp, bot
 from aiogram import types
@@ -37,7 +38,8 @@ async def sql_delete_TS_command(data):#по названию
 # ------------------------------------------------------------------------------------------
 # ДОБАВЛЕНИЕ ОЦЕНКИ в Note +++++++++++++++++++++++
 async def sql_add_note_command(note):#функция изменения бд
-    note = cur.execute(f"INSERT INTO Note('note') VALUES ({note})")
+    date = datetime.now()
+    note = cur.execute(f"INSERT INTO Note('note', 'date') VALUES (?, ?)", (note, date))
     base.commit()
     return note.lastrowid
 
@@ -71,7 +73,7 @@ async def sql_get_id_by_lastname(lastname):#функция изменения б
 # ------------------------------------------------------------------------------------------
 # ДОБАВЛЕНИЕ ОЦЕНКИ и User в NoteUsersRecipient ++++++++++++++++++++++
 async def sql_add_note_recipient_command(data):
-    cur.execute(f'INSERT INTO NoteUsersRecipient(id_note, id_users ) VALUES ({data["id_note"]}, {data["id_recipient"]})')#?-шифруем значения
+    cur.execute(f'INSERT INTO NoteUsersRecipient(id_note, id_users) VALUES ({data["id_note"]}, {data["id_recipient"]})')#?-шифруем значения
     base.commit()
 
 # ------------------------------------------------------------------------------------------
